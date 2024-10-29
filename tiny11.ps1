@@ -56,6 +56,7 @@ function Tiny11-Main {
 		Tiny11-RemoveProvisionedAppxPackages
 		Tiny11-RemoveEdgeWebBrowser
 		Tiny11-RemoveOneDrive
+		Tiny11-DisableFeatureWinRecall
 		Tiny11-ApplyRegistryOptimizations
 		Tiny11-ImageCleanUpAndUnmountAndExport
 
@@ -250,6 +251,7 @@ function Tiny11-RemoveProvisionedAppxPackages {
 		'Microsoft.549981C3F5F10',
 		'MicrosoftCorporationII.QuickAssist',
 		'MicrosoftCorporationII.MicrosoftFamily',
+		'Clipchamp.Clipchamp_yxz26nhyzhsrt',
 		'Microsoft.OutlookForWindows',
 		'MicrosoftTeams',
 		'Microsoft.Windows.DevHome',
@@ -257,6 +259,8 @@ function Tiny11-RemoveProvisionedAppxPackages {
 		'Microsoft.ApplicationCompatibilityEnhancements',
 		'MicrosoftWindows.CrossDevice',
 		'MSTeams',
+		'Microsoft.MicrosoftPCManager_8wekyb3d8bbwe',
+		'Microsoft.StartExperiencesApp_8wekyb3d8bbwe',
 
 		### Media Apps / Client non-N editions
 		'Microsoft.ZuneMusic',
@@ -266,7 +270,6 @@ function Tiny11-RemoveProvisionedAppxPackages {
 		'Microsoft.GamingApp',
 		'Microsoft.XboxGamingOverlay',
 		'Microsoft.Xbox.TCUI',
-		'Clipchamp.Clipchamp',
 
 		### Media Codecs / Client non-N editions, Team edition
 		# 'Microsoft.WebMediaExtensions',
@@ -275,9 +278,10 @@ function Tiny11-RemoveProvisionedAppxPackages {
 		# 'Microsoft.HEVCVideoExtension',
 		# 'Microsoft.VP9VideoExtensions',
 		# 'Microsoft.WebpImageExtension',
-		'Microsoft.DolbyAudioExtensions',
+		# 'Microsoft.DolbyAudioExtensions',
 		# 'Microsoft.AVCEncoderVideoExtension',
 		'Microsoft.MPEG2VideoExtension',
+		# 'Microsoft.AV1VideoExtension',
 
 		### Surface Hub Apps / Team edition
 		'Microsoft.Whiteboard',
@@ -293,8 +297,7 @@ function Tiny11-RemoveProvisionedAppxPackages {
 		### Custom apps to keep/remove
 		'Microsoft.MixedReality.Portal',
 		'Microsoft.MSPaint', # Paint 3D
-		'Microsoft.Office.OneNote',
-		'Microsoft.MicrosoftPCManager'
+		'Microsoft.Office.OneNote'
 	)
 
 	$output = & dism /English /Image:"$wimMountPoint" /Get-ProvisionedAppxPackages
@@ -378,6 +381,11 @@ function Tiny11-RemoveOneDrive {
 	Remove-Item -Path "$wimMountPoint\Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" 2>&1 | Out-Null
 }
 
+function Tiny11-DisableFeatureWinRecall {
+	Tiny11-TtyPrint 'Disabling Feature: Windows Recall...'
+	& dism /English /Image:"$wimMountPoint" /Disable-Feature /FeatureName:Recall /Remove 2>&1 | Out-Null
+}
+
 function Tiny11-ApplyRegistryOptimizations {
 	Tiny11-TtyPrint 'Running registry optimizaitons...'
 	& reg load 'HKLM\zCOMPONENTS' "$wimMountPoint\Windows\System32\config\COMPONENTS" 2>&1 | Out-Null
@@ -457,6 +465,12 @@ function Tiny11-ApplyRegistryOptimizations {
 	Tiny11-TtyPrint -NoNewLine -EraseLine 'Disabling Cortana for Windows 10...'
 	# This effectively skips Cortana setup on OOBE.
 	& reg add 'HKLM\zSOFTWARE\Policies\Microsoft\Windows\Windows Search' /v 'AllowCortana' /t 'REG_DWORD' /d '0' /f 2>&1 | Out-Null
+	Tiny11-TtyPrint -NoNewLine -EraseLine 'Disabling Windows 11 AI shit...'
+	# Disables Copilot on Windows 11.
+	& reg add 'HKLM\zNTUSER\Software\Policies\Microsoft\Windows\WindowsCopilot' /v 'TurnOffWindowsCopilot' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
+	& reg add "HKLM\zNTUSER\Software\Policies\Microsoft\Windows\CopilotKey" /v 'SetCopilotHardwareKey' /t 'REG_DWORD' /d '0' /f 2>&1 | Out-Null
+	# Disable Wincows Recall Snapshot
+	& reg add 'HKLM\zNTUSER\Software\Policies\Microsoft\Windows\WindowsAI' /v 'DisableAIDataAnalysis' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
 
 	if ($RemoveEdgeWebBrowser) {
 		Tiny11-TtyPrint -NoNewLine -EraseLine 'Cleaning Edge Browser registries...'
@@ -567,8 +581,6 @@ function Tiny11-ApplyPersonalRegistryOptimizations {
 	& reg add 'HKLM\zNTUSER\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer' /v 'NoAutorun' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
 	& reg add 'HKLM\zNTUSER\Software\Policies\Microsoft\Windows\Explorer' /v 'NoAutoplayfornonVolume' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
 	& reg add 'HKLM\zSOFTWARE\Policies\Microsoft\Windows\Explorer' /v 'NoAutoplayfornonVolume' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
-	# Disables Copilot on Windows 11.
-	& reg add 'HKLM\zNTUSER\Software\Policies\Microsoft\Windows\WindowsCopilot' /v 'TurnOffWindowsCopilot' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
 	# Disables automatic Windows update, also defer updates other than security updates up to 1 year.
 	& reg add 'HKLM\zSOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' /v 'NoAutoUpdate' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
 	& reg add 'HKLM\zSOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' /v 'AUOptions' /t 'REG_DWORD' /d '2' /f 2>&1 | Out-Null
