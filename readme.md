@@ -9,7 +9,7 @@ tweaks, including:
 - Most of the bloatwares are removed.
 - Language selection and local account creation are the only 2 steps shown on OOBE.
 - A slightly modified `autounattended.xml` file generated from [the generator](https://schneegans.de/windows/unattend-generator/).
-- Disables Wincows Recall.
+- Disables Windows Recall.
 
 ## Usage
 

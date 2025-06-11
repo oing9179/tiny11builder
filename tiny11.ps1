@@ -1,4 +1,6 @@
 # Tiny11 Image Builder Script
+# TODO: Add Firefox Stub installer to desktop.
+# https://download.mozilla.org/?product=firefox-stub&os=win&lang=en-GB
 
 param(
 	[Parameter(HelpMessage='Enable non-interactive mode for automated script execution.')]
@@ -297,8 +299,15 @@ function Tiny11-RemoveProvisionedAppxPackages {
 		### Custom apps to keep/remove
 		'Microsoft.MixedReality.Portal',
 		'Microsoft.MSPaint', # Paint 3D
-		'Microsoft.Office.OneNote'
+		'Microsoft.Office.OneNote',
+		'Microsoft.Windows.PeopleExperienceHost',
+		'MicrosoftWindows.Client.CoreAI', # Click to Do
+		'MicrosoftWindows.Client.Photon'
 	)
+	if ($RemoveEdgeWebBrowser) {
+		$packagePrefixes += 'Microsoft.MicrosoftEdgeDevToolsClient'
+		$packagePrefixes += 'Microsoft.MicrosoftEdge.Stable'
+	}
 
 	$output = & dism /English /Image:"$wimMountPoint" /Get-ProvisionedAppxPackages
 	$matcher = $output | Select-String "PackageName : (\S+)$"
@@ -443,10 +452,6 @@ function Tiny11-ApplyRegistryOptimizations {
 	& reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Communications" /v 'ConfigureChatAutoInstall' /t 'REG_DWORD' /d '0' /f 2>&1 | Out-Null
 	& reg add 'HKLM\zNTUSER\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced' /v 'TaskbarMn' /t 'REG_DWORD' /d '0' /f 2>&1 | Out-Null
 
-	Tiny11-TtyPrint -NoNewLine -EraseLine 'Removing Microsoft Edge related registries...'
-	& reg delete 'HKLM\zSOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge' /f 2>&1 | Out-Null
-	& reg delete 'HKLM\zSOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge Update' /f 2>&1 | Out-Null
-
 	Tiny11-TtyPrint -NoNewLine -EraseLine 'Disabling OneDrive folder backup...'
 	& reg add 'HKLM\zSOFTWARE\Policies\Microsoft\Windows\OneDrive' /v 'DisableFileSyncNGSC' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
 
@@ -469,8 +474,12 @@ function Tiny11-ApplyRegistryOptimizations {
 	# Disables Copilot on Windows 11.
 	& reg add 'HKLM\zNTUSER\Software\Policies\Microsoft\Windows\WindowsCopilot' /v 'TurnOffWindowsCopilot' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
 	& reg add "HKLM\zNTUSER\Software\Policies\Microsoft\Windows\CopilotKey" /v 'SetCopilotHardwareKey' /t 'REG_DWORD' /d '0' /f 2>&1 | Out-Null
-	# Disable Wincows Recall Snapshot
+	# Disable Wincows Recall
+	& reg add 'HKLM\zSOFTWARE\Policies\Microsoft\Windows\WindowsAI' /v 'AllowRecallEnablement' /t 'REG_DWORD' /d '0' /f 2>&1 | Out-Null
+	& reg add 'HKLM\zSOFTWARE\Policies\Microsoft\Windows\WindowsAI' /v 'DisableAIDataAnalysis' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
 	& reg add 'HKLM\zNTUSER\Software\Policies\Microsoft\Windows\WindowsAI' /v 'DisableAIDataAnalysis' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
+	& reg add 'HKLM\zSOFTWARE\Policies\Microsoft\Windows\WindowsAI' /v 'DisableClickToDo' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
+	& reg add 'HKLM\zNTUSER\Software\Policies\Microsoft\Windows\WindowsAI' /v 'DisableClickToDo' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
 
 	if ($RemoveEdgeWebBrowser) {
 		Tiny11-TtyPrint -NoNewLine -EraseLine 'Cleaning Edge Browser registries...'
@@ -606,6 +615,8 @@ function Tiny11-ApplyPersonalRegistryOptimizations {
 	# Prevent MicrosoftPCManager from automatically installed.
 	& reg add 'HKLM\zSOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Orchestrator\UScheduler\PCManagerUpdate' /v 'workCompleted' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
 	& reg delete 'HKLM\zSOFTWARE\Microsoft\WindowsUpdate\Orchestrator\UScheduler_Oobe\PCManagerUpdate' /f 2>&1 | Out-Null
+	# Less trash in Quick Settings(Win+A).
+	& reg add "HKLM\zSOFTWARE\Policies\Microsoft\Windows\Explorer" /v 'SimplifyQuickSettings' /t 'REG_DWORD' /d '1' /f 2>&1 | Out-Null
 
 	<#
 	# "This PC -> Advanced system settings -> 'Advanced' tab -> Performance settings"
@@ -658,7 +669,7 @@ function Tiny11-ApplyPersonalRegistryOptimizations {
 	& reg add 'HKLM\zNTUSER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' /v 'TaskbarGlomLevel' /t 'REG_DWORD' /d '0x2' /f 2>&1 | Out-Null
 	& reg add 'HKLM\zNTUSER\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' /v 'MMTaskbarGlomLevel' /t 'REG_DWORD' /d '0x2' /f 2>&1 | Out-Null
 	# Turns Off the Windows Theme Transparency effects.
-	# & reg add 'HKLM\zNTUSER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' /v 'EnableTransparency' /t 'REG_DWORD' /d '0x0' /f 2>&1 | Out-Null
+	& reg add 'HKLM\zNTUSER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' /v 'EnableTransparency' /t 'REG_DWORD' /d '0x0' /f 2>&1 | Out-Null
 	# Turns On the Windows Theme accent color for Start menu, Taskbar, and Action center.
 	& reg add 'HKLM\zNTUSER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize' /v 'ColorPrevalence' /t 'REG_DWORD' /d '0x1' /f 2>&1 | Out-Null
 	# Turns On the Windows Theme accent color for Title bars.
